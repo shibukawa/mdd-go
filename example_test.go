@@ -101,7 +101,7 @@ var nestedSampleAndLabel = `
 
 `
 
-func ExampleLayer() {
+func ExampleLayout() {
 	// Usually these code is in init() function
 	nestedJig := mdd.NewDocJig[RootLayer]()
 	root := nestedJig.Root()
