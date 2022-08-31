@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"reflect"
 	"strings"
@@ -12,10 +11,6 @@ import (
 	"github.com/future-architect/tagscanner/runtimescan"
 	"github.com/russross/blackfriday/v2"
 )
-
-func init() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-}
 
 type alias struct {
 	lang  string

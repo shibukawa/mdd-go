@@ -9,6 +9,15 @@ import (
 	"github.com/future-architect/tagscanner/runtimescan"
 )
 
+// Layout[T] represents document structure
+//
+// Heading title makes layers:
+//
+//	# Root layer
+//
+//	## Child layer
+//
+//	## GrandChild layer
 type Layout[T any] struct {
 	j                 *DocJig[T]
 	Level             int
