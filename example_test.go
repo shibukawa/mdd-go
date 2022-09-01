@@ -98,7 +98,6 @@ var nestedSampleAndLabel = `
 ## Level2 Heading: Child
 
 ### Level3 Heading: Grandchild (BoolOption, StringOption=option, IntOption=100)
-
 `
 
 func ExampleLayout() {
@@ -137,3 +136,194 @@ func ExampleLayout() {
 	//       .BoolOption: true
 	//       .IntOption: 100
 }
+
+type Shell struct {
+	Name string
+	Code string
+}
+
+type LiterateShell struct {
+	Shells []Shell
+}
+
+var literateShellSrc = `
+# Recovery Batch
+
+## Dump
+
+Dump database and copy the file to S3.
+
+~~~sh
+$ pg_dumpall -Fc -f mydb.dump mydb
+$ aws s3 cp mydb.dump s3://backup-bucket/mydb.dump
+~~~
+
+## Restore
+
+Retreat database dump from S3 and restore DB.
+
+~~~
+$ aws s3 cp s3://backup-bucket/mydb.dump mydb.dump
+$ pg_restore -d mydb mydb.dump
+~~~
+`
+
+func ExampleCodeFence() {
+	// Usually these code is in init() function
+	shellJig := mdd.NewDocJig[LiterateShell]()
+	root := shellJig.Root()
+
+	// Store multiple layers into Shells slice
+	shells := root.Children("Shells")
+	shells.Label("Name")
+	shells.CodeFence("Code")
+
+	parsedShells := shellJig.MustParseString(literateShellSrc)
+
+	for _, s := range parsedShells.Shells {
+		fmt.Printf("Name: %s\n", s.Name)
+		fmt.Println("Code:")
+		fmt.Println(s.Code)
+		fmt.Println("")
+	}
+	// Output:
+	// Name: Dump
+	// Code:
+	// $ pg_dumpall -Fc -f mydb.dump mydb
+	// $ aws s3 cp mydb.dump s3://backup-bucket/mydb.dump
+	//
+	// Name: Restore
+	// Code:
+	// $ aws s3 cp s3://backup-bucket/mydb.dump mydb.dump
+	// $ pg_restore -d mydb mydb.dump
+}
+
+type User struct {
+	ID    int
+	Name  string
+	Email string
+}
+
+type UserList struct {
+	Users []User
+}
+
+var userDataDocument = `
+# Define Users
+
+## Regular Users
+
+| ID | Name  | Email             |
+|----|-------|-------------------|
+| 1  | Alan  | alan@example.com  |
+| 2  | Ellie | ellie@example.com |
+
+## Security Expert Users
+
+| ID | Name  | Email             |
+|----|-------|-------------------|
+| 3  | Alice | alice@example.com |
+| 4  | Bob   | bob@example.com   |
+
+## Admin Users
+
+You can shuffle column order:
+
+| ID | Email             | Name   |
+|----|-------------------|--------|
+| 5  | denis@example.com | Dennis |
+`
+
+func ExampleTable() {
+	// Usually these code is in init() function
+	userJig := mdd.NewDocJig[UserList]()
+	root := userJig.Root()
+	// Don't create instance for section title.
+	// So table rows under *Users sections are
+	// merged.
+	usersSection := root.Children(".", "")
+
+	// Define table column mapping to struct field
+	userTable := usersSection.Table("Users")
+	userTable.Field("ID")
+	userTable.Field("Name")
+	userTable.Field("Email")
+
+	doc := userJig.MustParseString(userDataDocument)
+
+	for _, u := range doc.Users {
+		fmt.Printf("%s (ID=%d, Email=%s)\n", u.Name, u.ID, u.Email)
+	}
+	// Output:
+	// Alan (ID=1, Email=alan@example.com)
+	// Ellie (ID=2, Email=ellie@example.com)
+	// Alice (ID=3, Email=alice@example.com)
+	// Bob (ID=4, Email=bob@example.com)
+	// Dennis (ID=5, Email=denis@example.com)
+}
+
+/*
+type DesignDocument struct {
+	Name        string
+	Author      string
+	PackageName string
+}
+
+type UserList struct {
+	Users []User
+}
+
+var userDataDocument = `
+# Define Users
+
+## Regular Users
+
+| ID | Name  | Email             |
+|----|-------|-------------------|
+| 1  | Alan  | alan@example.com  |
+| 2  | Ellie | ellie@example.com |
+
+## Security Expert Users
+
+| ID | Name  | Email             |
+|----|-------|-------------------|
+| 3  | Alice | alice@example.com |
+| 4  | Bob   | bob@example.com   |
+
+## Admin Users
+
+You can shuffle column order:
+
+| ID | Email             | Name   |
+|----|-------------------|--------|
+| 5  | denis@example.com | Dennis |
+`
+
+func ExampleTable() {
+	// Usually these code is in init() function
+	userJig := mdd.NewDocJig[UserList]()
+	root := userJig.Root()
+	// Don't create instance for section title.
+	// So table rows under *Users sections are
+	// merged.
+	usersSection := root.Children(".", "")
+
+	// Define table column mapping to struct field
+	userTable := usersSection.Table("Users")
+	userTable.Field("ID")
+	userTable.Field("Name")
+	userTable.Field("Email")
+
+	doc := userJig.MustParseString(userDataDocument)
+
+	for _, u := range doc.Users {
+		fmt.Printf("%s (ID=%d, Email=%s)\n", u.Name, u.ID, u.Email)
+	}
+	// Output:
+	// Alan (ID=1, Email=alan@example.com)
+	// Ellie (ID=2, Email=ellie@example.com)
+	// Alice (ID=3, Email=alice@example.com)
+	// Bob (ID=4, Email=bob@example.com)
+	// Dennis (ID=5, Email=denis@example.com)
+}
+*/

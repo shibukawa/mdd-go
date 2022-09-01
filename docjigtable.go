@@ -38,10 +38,6 @@ func (t *Table[T]) AsMap() {
 	t.asMap = true
 }
 
-func (t *Table[T]) PreserveAllCells(fieldName string) *Table[T] {
-	return t
-}
-
 func (t Table[T]) assignCells(target reflect.Value, cells []map[string]string, key2column map[string]int, label string, doc *T) error {
 	if t.asMap {
 		return t.assignCellsAsMap(target, cells, key2column, label, doc)

@@ -17,6 +17,51 @@ type alias struct {
 	label string
 }
 
+// DocJig is a entry struct of this package.
+//
+// To create markdown parser, you should instantiate
+// this struct by using [NewDocJig] function and specify
+// contents with its and [Layout]'s methods ([Layout] is retreated by [DocJig.Root] method):
+//
+//	  package yourparser
+//
+//	  type LiterateBatch struct {
+//		     Name string
+//	      Code string
+//	  }
+//
+//	  var jig = NewDocJig[LiterateBatch]()
+//
+//	  func init() {
+//		     root := jig.Root()            // Top heading
+//	      root.Name("Name")             // Assign heading title to Name field
+//	      root.CodeFence("Code", "sh")  // Assign code fence content (type sh) to Code field
+//	  }
+//
+//	  // Add your package's entry functions you like (XXXParseYYY funcs)
+//	  func Parse(r io.Reader) (*LiterateBatch, error) {
+//	      return jig.Parse(r)
+//	  }
+//
+//	  func ParseString(s string) (*LiterateBatch, error) {
+//	      return jig.ParseString(s)
+//	  }
+//
+//	  func ParseFile(fp filepath) (*LiterateBatch, error) {
+//	      return jig.ParseFile(fp)
+//	  }
+//
+//	  func MustParse(r io.Reader) *LiterateBatch {
+//	      return jig.Parse(r)
+//	  }
+//
+//	  func MustParseString(s string) *LiterateBatch {
+//	      return jig.ParseString(s)
+//	  }
+//
+//	  func MustParseFile(fp filepath) *LiterateBatch {
+//	      return jig.ParseFile(fp)
+//	  }
 type DocJig[T any] struct {
 	root        *Layout[T]
 	DefaultLang string
@@ -109,14 +154,29 @@ func (i *Alias[T]) Lang(lang string, aliases ...string) *Alias[T] {
 	return i
 }
 
+// Root returns top [Layout] of markdown document
+//
+// [Layout] represents document block that has single heading and contents
+// before same level heading.
+//
+// mmd-go only support markdown file that has single level 1 heading
 func (j *DocJig[T]) Root(pattern ...string) *Layout[T] {
 	return j.root
 }
 
-func (j *DocJig[T]) GenerateTemplate(w io.Writer) {
+func (j *DocJig[T]) GenerateTemplate(w io.Writer) error {
 	// todo
+	return nil
 }
 
+// Parse method is an entry point of your DocJig instance for
+// your package user.
+//
+// You should wrap and create public function in you package like this:
+//
+//	func Parse(r io.Reader) (*YourDocument, error) {
+//	    return jig.Parse(r)
+//	}
 func (j *DocJig[T]) Parse(r io.Reader) (*T, error) {
 	src, err := io.ReadAll(r)
 	if err != nil {
@@ -125,6 +185,14 @@ func (j *DocJig[T]) Parse(r io.Reader) (*T, error) {
 	return j.ParseString(string(src))
 }
 
+// Parse method is an entry point of your DocJig instance for
+// your package user.
+//
+// You should wrap and create public function in you package like this:
+//
+//	func ParseString(r io.Reader) (*YourDocument, error) {
+//	    return jig.ParseString(r)
+//	}
 func (j *DocJig[T]) ParseString(src string) (*T, error) {
 	var result T
 
@@ -272,6 +340,14 @@ func parseCodeBlockType(info []byte) (mode string, targetname string) {
 	return
 }
 
+// Parse method is an entry point of your DocJig instance for
+// your package user.
+//
+// You should wrap and create public function in you package like this:
+//
+//	func ParseFile(filepath string) (*YourDocument, error) {
+//	    return jig.ParseFile(filepath)
+//	}
 func (t *DocJig[T]) ParseFile(filepath string) (*T, error) {
 	o, err := os.Open(filepath)
 	if err != nil {
@@ -281,6 +357,14 @@ func (t *DocJig[T]) ParseFile(filepath string) (*T, error) {
 	return t.Parse(o)
 }
 
+// Parse method is an entry point of your DocJig instance for
+// your package user.
+//
+// You should wrap and create public function in you package like this:
+//
+//	func MustParse(r io.Reader) *YourDocument {
+//	    return jig.MustParse(r)
+//	}
 func (t *DocJig[T]) MustParse(r io.Reader) *T {
 	result, err := t.Parse(r)
 	if err != nil {
@@ -289,6 +373,14 @@ func (t *DocJig[T]) MustParse(r io.Reader) *T {
 	return result
 }
 
+// MustParseString method is an entry point of your DocJig instance for
+// your package user.
+//
+// You should wrap and create public function in you package like this:
+//
+//	func MustParseString(src string) *YourDocument {
+//	    return jig.MustParseString(src)
+//	}
 func (t *DocJig[T]) MustParseString(src string) *T {
 	result, err := t.ParseString(src)
 	if err != nil {
@@ -297,6 +389,14 @@ func (t *DocJig[T]) MustParseString(src string) *T {
 	return result
 }
 
+// MustParseFile method is an entry point of your DocJig instance for
+// your package user.
+//
+// You should wrap and create public function in you package like this:
+//
+//	func MustParseFile(filepath string) *YourDocument {
+//	    return jig.MustParseFile(filepath)
+//	}
 func (t *DocJig[T]) MustParseFile(filepath string) *T {
 	result, err := t.ParseFile(filepath)
 	if err != nil {

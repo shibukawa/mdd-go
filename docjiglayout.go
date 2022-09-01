@@ -117,7 +117,7 @@ func (l *Layout[T]) findMatchedChild(label string, parentValue reflect.Value) (c
 					}
 					childValue = childValue.Elem()
 				}
-			} else {
+			} else if c.instanceFieldName != "." {
 				// add slice
 				slice := childValue
 				rowType := slice.Type().Elem() // todo: should support pointer type
