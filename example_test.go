@@ -21,26 +21,6 @@ type CRUDMatrix struct {
 	Description string
 }
 
-var sqlSampleDoc = `
-# Query User
-
-You can mapping heading titles, code block fences, tables to Go's struct field.
-
-This part is ignored. You can add detail description, design history, poem, and so on.
-
-~~~sql
-select user_id, name, email from users where name=/*name*/'bob';
-~~~
-
-## CRUD Matrix
-
-Heading structure is important.
-
-| Table | C | R | U | D | Description            |
-|-------|---|---|---|---|------------------------|
-| users |   | X |   |   | name is indexed        |
-`
-
 func Example() {
 	// Usually these code is in init() function
 	sqlJig := mdd.NewDocJig[SQLDoc]()
@@ -62,14 +42,32 @@ func Example() {
 	crud.Field("D").Required()
 	crud.Field("Description")
 
-	doc, err := sqlJig.ParseString(sqlSampleDoc)
-	fmt.Printf("err: %v\n", err)
+	var sqlSampleDoc = `
+# Query User
+
+You can mapping heading titles, code block fences, tables to Go's struct field.
+
+This part is ignored. You can add detail description, design history, poem, and so on.
+
+~~~sql
+select user_id, name, email from users where name=/*name*/'bob';
+~~~
+
+## CRUD Matrix
+
+Heading structure is important.
+
+| Table | C | R | U | D | Description            |
+|-------|---|---|---|---|------------------------|
+| users |   | X |   |   | name is indexed        |
+`
+
+	doc, _ := sqlJig.ParseString(sqlSampleDoc)
 	fmt.Printf("Name: %v\n", doc.Name)
 	fmt.Printf("SQL: %v\n", doc.SQL)
 	fmt.Printf("CRUD: %v\n", doc.CRUDMatrix[0])
 
 	// Output:
-	// err: <nil>
 	// Name: Query User
 	// SQL: select user_id, name, email from users where name=/*name*/'bob';
 	// CRUD: {users false true false false name is indexed}
@@ -92,14 +90,6 @@ type Level3 struct {
 	IntOption    int
 }
 
-var nestedSampleAndLabel = `
-# Root
-
-## Level2 Heading: Child
-
-### Level3 Heading: Grandchild (BoolOption, StringOption=option, IntOption=100)
-`
-
 func ExampleLayout() {
 	// Usually these code is in init() function
 	nestedJig := mdd.NewDocJig[RootLayer]()
@@ -111,7 +101,8 @@ func ExampleLayout() {
 	// This layer has "pattern prefix" as a second param
 	// mdd-go searching the heading that has this pattern.
 	// Name field store a part of heading label that trims pattern part.
-	level2 := root.Child("Level2", "Level2 Heading").Label("Name")
+	level2 := root.Child("Level2", "Level2 Heading")
+	level2.Label("Name")
 
 	// The layer title can have option that is in paren ().
 	// Each Option() has destination field name.
@@ -119,6 +110,14 @@ func ExampleLayout() {
 	level3.Option("StringOption")
 	level3.Option("BoolOption")
 	level3.Option("IntOption")
+
+	var nestedSampleAndLabel = `
+# Root
+
+## Level2 Heading: Child
+
+### Level3 Heading: Grandchild (BoolOption, StringOption=option, IntOption=100)
+`
 
 	doc := nestedJig.MustParseString(nestedSampleAndLabel)
 
@@ -146,7 +145,17 @@ type LiterateShell struct {
 	Shells []Shell
 }
 
-var literateShellSrc = `
+func ExampleCodeFence() {
+	// Usually these code is in init() function
+	shellJig := mdd.NewDocJig[LiterateShell]()
+	root := shellJig.Root()
+
+	// Store multiple layers into Shells slice
+	shells := root.Children("Shells")
+	shells.Label("Name")
+	shells.CodeFence("Code")
+
+	var literateShellSrc = `
 # Recovery Batch
 
 ## Dump
@@ -167,16 +176,6 @@ $ aws s3 cp s3://backup-bucket/mydb.dump mydb.dump
 $ pg_restore -d mydb mydb.dump
 ~~~
 `
-
-func ExampleCodeFence() {
-	// Usually these code is in init() function
-	shellJig := mdd.NewDocJig[LiterateShell]()
-	root := shellJig.Root()
-
-	// Store multiple layers into Shells slice
-	shells := root.Children("Shells")
-	shells.Label("Name")
-	shells.CodeFence("Code")
 
 	parsedShells := shellJig.MustParseString(literateShellSrc)
 
@@ -208,7 +207,22 @@ type UserList struct {
 	Users []User
 }
 
-var userDataDocument = `
+func ExampleTable() {
+	// Usually these code is in init() function
+	userJig := mdd.NewDocJig[UserList]()
+	root := userJig.Root()
+	// Don't create instance for section title.
+	// So table rows under *Users sections are
+	// merged.
+	usersSection := root.Children(".", "")
+
+	// Define table column mapping to struct field
+	userTable := usersSection.Table("Users")
+	userTable.Field("ID")
+	userTable.Field("Name")
+	userTable.Field("Email")
+
+	var userDataDocument = `
 # Define Users
 
 ## Regular Users
@@ -234,21 +248,6 @@ You can shuffle column order:
 | 5  | denis@example.com | Dennis |
 `
 
-func ExampleTable() {
-	// Usually these code is in init() function
-	userJig := mdd.NewDocJig[UserList]()
-	root := userJig.Root()
-	// Don't create instance for section title.
-	// So table rows under *Users sections are
-	// merged.
-	usersSection := root.Children(".", "")
-
-	// Define table column mapping to struct field
-	userTable := usersSection.Table("Users")
-	userTable.Field("ID")
-	userTable.Field("Name")
-	userTable.Field("Email")
-
 	doc := userJig.MustParseString(userDataDocument)
 
 	for _, u := range doc.Users {
@@ -262,68 +261,56 @@ func ExampleTable() {
 	// Dennis (ID=5, Email=denis@example.com)
 }
 
-/*
-type DesignDocument struct {
-	Name        string
-	Author      string
-	PackageName string
-}
+func ExampleAlias() {
+	// Usually these code is in init() function
+	sqlJig := mdd.NewDocJig[SQLDoc]()
+	sqlJig.Alias("CRUD Matrix", "CRUDTable").Lang("ja", "CRUDマトリックス", "CRUD表")
+	sqlJig.Alias("Table").Lang("ja", "テーブル", "表")
+	sqlJig.Alias("Description", "Desc", "Detail").Lang("ja", "説明", "詳細")
 
-type UserList struct {
-	Users []User
-}
+	root := sqlJig.Root()
+	// Store root heading title to Name field
+	root.Label("Name")
+	// Store code fence block (sql) to SQL field
+	root.CodeFence("SQL", "sql")
 
-var userDataDocument = `
-# Define Users
+	// Store table to struct slice named CRUDMatrix
+	// "." specifies struct hierarchy.
+	// If it is name, mdd-go dig to the child element with the name
+	// "." keeps same depth of struct structure
+	crud := root.Child(".", "CRUD Matrix").Table("CRUDMatrix")
+	crud.Field("Table").Required()
+	crud.Field("C").Required()
+	crud.Field("R").Required()
+	crud.Field("U").Required()
+	crud.Field("D").Required()
+	crud.Field("Description")
 
-## Regular Users
+	var sqlSampleDoc = `
+# Japanese Sample
 
-| ID | Name  | Email             |
-|----|-------|-------------------|
-| 1  | Alan  | alan@example.com  |
-| 2  | Ellie | ellie@example.com |
+You can absorb label variations including other language.
 
-## Security Expert Users
+~~~sql
+select user_id, name, email from users where name=/*name*/'bob';
+~~~
 
-| ID | Name  | Email             |
-|----|-------|-------------------|
-| 3  | Alice | alice@example.com |
-| 4  | Bob   | bob@example.com   |
+## CRUDマトリックス
 
-## Admin Users
+Heading structure is important.
 
-You can shuffle column order:
-
-| ID | Email             | Name   |
-|----|-------------------|--------|
-| 5  | denis@example.com | Dennis |
+| テーブル | C | R | U | D | 詳細                       |
+|----------|---|---|---|---|----------------------------|
+| users    |   | X |   |   | nameにはインデックスを貼る |
 `
 
-func ExampleTable() {
-	// Usually these code is in init() function
-	userJig := mdd.NewDocJig[UserList]()
-	root := userJig.Root()
-	// Don't create instance for section title.
-	// So table rows under *Users sections are
-	// merged.
-	usersSection := root.Children(".", "")
+	doc, _ := sqlJig.ParseString(sqlSampleDoc)
+	fmt.Printf("Name: %v\n", doc.Name)
+	fmt.Printf("SQL: %v\n", doc.SQL)
+	fmt.Printf("CRUD: %v\n", doc.CRUDMatrix[0])
 
-	// Define table column mapping to struct field
-	userTable := usersSection.Table("Users")
-	userTable.Field("ID")
-	userTable.Field("Name")
-	userTable.Field("Email")
-
-	doc := userJig.MustParseString(userDataDocument)
-
-	for _, u := range doc.Users {
-		fmt.Printf("%s (ID=%d, Email=%s)\n", u.Name, u.ID, u.Email)
-	}
 	// Output:
-	// Alan (ID=1, Email=alan@example.com)
-	// Ellie (ID=2, Email=ellie@example.com)
-	// Alice (ID=3, Email=alice@example.com)
-	// Bob (ID=4, Email=bob@example.com)
-	// Dennis (ID=5, Email=denis@example.com)
+	// Name: Japanese Sample
+	// SQL: select user_id, name, email from users where name=/*name*/'bob';
+	// CRUD: {users false true false false nameにはインデックスを貼る}
 }
-*/

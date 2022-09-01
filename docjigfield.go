@@ -6,6 +6,7 @@ type StructField[T any] struct {
 	origKey   string
 	required  bool
 	convert   func(value string, t *T) (any, error)
+	samples   []any
 }
 
 func (s *StructField[T]) Alias(alias ...string) *StructField[T] {
@@ -20,4 +21,8 @@ func (s *StructField[T]) Required() *StructField[T] {
 func (s *StructField[T]) As(convert func(value string, t *T) (any, error)) *StructField[T] {
 	s.convert = convert
 	return s
+}
+
+func (s *StructField[T]) Samples(samples ...any) {
+	s.samples = samples
 }

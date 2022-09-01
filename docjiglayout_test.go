@@ -1,6 +1,8 @@
 package mdd
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -442,6 +444,141 @@ func TestLayout_HeadingOption(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestLayout_Generate(t *testing.T) {
+	type Level2 struct {
+		Name      string
+		StringOpt string
+		BoolOpt   bool
+	}
+
+	type Doc struct {
+		Name   string
+		Level2 Level2
+	}
+
+	type args struct {
+		create func(t *testing.T) *DocJig[Doc]
+		opt    GenerateOption
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr string
+	}{
+		{
+			name: "only header (default)",
+			args: args{
+				create: func(t *testing.T) *DocJig[Doc] {
+					jig := NewDocJig[Doc]()
+					root := jig.Root()
+					root.Label("Name")
+					root.Child("Level2")
+					return jig
+				},
+			},
+			want: TrimIndent(t, `
+				# [Name]
+				
+				## [Level2]
+				`),
+		},
+		{
+			name: "only header (sample)",
+			args: args{
+				create: func(t *testing.T) *DocJig[Doc] {
+					jig := NewDocJig[Doc]()
+					root := jig.Root()
+					root.Label("Name").Sample("Doc Title")
+					root.Child("Level2", "Level2").Sample("Child Title")
+					return jig
+				},
+			},
+			want: TrimIndent(t, `
+				# [Doc Title]
+				
+				## Level2: [Child Title]
+				`),
+		},
+		{
+			name: "only header (sample content)",
+			args: args{
+				create: func(t *testing.T) *DocJig[Doc] {
+					jig := NewDocJig[Doc]()
+					root := jig.Root()
+					root.Label("Name").Sample("Doc Title")
+					root.SampleContent("This is sample content.")
+					level2 := root.Child("Level2", "Level2").Sample("Child Title")
+					level2.SampleContent("This is sample content in child layout.")
+					return jig
+				},
+			},
+			want: TrimIndent(t, `
+				# [Doc Title]
+
+				This is sample content.
+				
+				## Level2: [Child Title]
+
+				This is sample content in child layout.
+				`),
+		},
+		{
+			name: "only header (option)",
+			args: args{
+				create: func(t *testing.T) *DocJig[Doc] {
+					jig := NewDocJig[Doc]()
+					root := jig.Root()
+					label := root.Label("Name").Sample("Doc Title")
+					label.Option("StringOpt").Sample("Test")
+					label.Option("BoolOpt").Sample(true)
+					return jig
+				},
+			},
+			want: TrimIndent(t, `
+				# [Doc Title] (StringOpt=[Test], BoolOpt)
+				`),
+		},
+		{
+			name: "Translation",
+			args: args{
+				create: func(t *testing.T) *DocJig[Doc] {
+					jig := NewDocJig[Doc]()
+					jig.Alias("Doc Title").Lang("ja", "ドキュメントタイトル")
+					jig.Alias("Child Title").Lang("ja", "子タイトル")
+					jig.Alias("Level2").Lang("ja", "レベル2")
+
+					root := jig.Root()
+					root.Label("Name").Sample("Doc Title")
+					root.Child("Level2", "Level2").Sample("Child Title")
+					return jig
+				},
+				opt: GenerateOption{
+					Language: "ja",
+				},
+			},
+			want: TrimIndent(t, `
+				# [ドキュメントタイトル]
+
+				## レベル2: [子タイトル]
+				`),
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			jig := tc.args.create(t)
+			var buffer bytes.Buffer
+			err := jig.GenerateTemplate(&buffer, tc.args.opt)
+			if tc.wantErr != "" {
+				assert.EqualError(t, err, tc.wantErr)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.want, strings.TrimRight(buffer.String(), "\n"))
 			}
 		})
 	}

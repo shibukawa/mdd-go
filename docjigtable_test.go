@@ -1,6 +1,7 @@
 package mdd
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 	"testing"
@@ -393,6 +394,87 @@ func TestRepeatableTable(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestTable_Generate(t *testing.T) {
+	type Row struct {
+		StringCell string
+		IntCell    int
+		BoolCell   bool
+	}
+
+	type Doc struct {
+		TableContent []Row
+	}
+
+	type args struct {
+		create func(t *testing.T) *DocJig[Doc]
+		opt    GenerateOption
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr string
+	}{
+		{
+			name: "table",
+			args: args{
+				create: func(t *testing.T) *DocJig[Doc] {
+					jig := NewDocJig[Doc]()
+					root := jig.Root()
+					table := root.Table("TableContent")
+					table.Field("StringCell").Samples("a", "b")
+					table.Field("IntCell").Samples(1, 2)
+					table.Field("BoolCell").Samples(true, false)
+					return jig
+				},
+			},
+			want: TrimIndent(t, `
+				# [Title]
+
+				| StringCell | IntCell | BoolCell |
+				|------------|---------|----------|
+				| a          | 1       | true     |
+				| b          | 2       | false    |
+				`),
+		},
+		{
+			name: "no sample",
+			args: args{
+				create: func(t *testing.T) *DocJig[Doc] {
+					jig := NewDocJig[Doc]()
+					root := jig.Root()
+					table := root.Table("TableContent")
+					table.Field("StringCell")
+					table.Field("IntCell")
+					table.Field("BoolCell")
+					return jig
+				},
+			},
+			want: TrimIndent(t, `
+				# [Title]
+
+				| StringCell | IntCell | BoolCell |
+				|------------|---------|----------|
+				| ...        | ...     | ...      |
+				| ...        | ...     | ...      |
+				`),
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			jig := tc.args.create(t)
+			var buffer bytes.Buffer
+			err := jig.GenerateTemplate(&buffer, tc.args.opt)
+			if tc.wantErr != "" {
+				assert.EqualError(t, err, tc.wantErr)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.want, strings.TrimRight(buffer.String(), "\n"))
 			}
 		})
 	}

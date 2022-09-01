@@ -1,6 +1,8 @@
 package mdd
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -210,6 +212,59 @@ func TestRepeatableCodeFence(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestCodeFence_Generate(t *testing.T) {
+	type Doc struct {
+		Name string
+		Code string
+		Lang string
+		Info string
+	}
+
+	type args struct {
+		create func(t *testing.T) *DocJig[Doc]
+		opt    GenerateOption
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr string
+	}{
+		{
+			name: "code fence",
+			args: args{
+				create: func(t *testing.T) *DocJig[Doc] {
+					jig := NewDocJig[Doc]()
+					root := jig.Root()
+					root.Label("Name")
+					root.CodeFence("Code", "sql").Info("Info").Language("Lang").SampleCode("select * from users;").SampleInfo(":test")
+					return jig
+				},
+			},
+			want: TrimIndent(t, `
+				# [Name]
+
+				~~~sql:test
+				select * from users;
+				~~~
+				`, "~~~", "```"),
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			jig := tc.args.create(t)
+			var buffer bytes.Buffer
+			err := jig.GenerateTemplate(&buffer, tc.args.opt)
+			if tc.wantErr != "" {
+				assert.EqualError(t, err, tc.wantErr)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.want, strings.TrimRight(buffer.String(), "\n"))
 			}
 		})
 	}

@@ -2,6 +2,7 @@ package mdd
 
 import (
 	"fmt"
+	"io"
 	"reflect"
 	"regexp"
 	"strings"
@@ -23,12 +24,30 @@ type Layout[T any] struct {
 	Level             int
 	labelFieldName    string
 	labelPattern      string
+	samples           []string
+	sampleContents    []string
+	labelID           string
 	instanceFieldName string
 	children          []*Layout[T]
 	codeFences        []*CodeFence[T]
 	table             *Table[T]
 	repeat            bool
 	options           []*Option[T]
+}
+
+func (l *Layout[T]) Sample(sample string, samples ...string) *Layout[T] {
+	l.samples = append([]string{sample}, samples...)
+	return l
+}
+
+func (l *Layout[T]) SampleContent(sample string, samples ...string) *Layout[T] {
+	l.sampleContents = append([]string{sample}, samples...)
+	return l
+}
+
+func (l *Layout[T]) ID(labelID string) *Layout[T] {
+	l.labelID = labelID
+	return l
 }
 
 func (l *Layout[T]) Label(fieldName string, pattern ...string) *Layout[T] {
@@ -184,4 +203,88 @@ type Option[T any] struct {
 	l         *Layout[T]
 	fieldName string
 	pattern   string
+	sample    any
+}
+
+func (o *Option[T]) Sample(s any) {
+	o.sample = s
+}
+
+func (l Layout[T]) generateTemplate(w io.Writer, lang string) error {
+	length := 1
+	if l.repeat {
+		length = 2
+	}
+
+	i18n := func(src string) string {
+		return l.j.findTranslation(src, lang)
+	}
+
+	for i := 0; i < length; i++ {
+		fmt.Fprintf(w, "%s %s\n\n", strings.Repeat("#", l.Level), l.templateLabel(i, lang))
+
+		if len(l.sampleContents) > 0 {
+			var c string
+			if i < len(l.sampleContents) {
+				c = i18n(l.sampleContents[i])
+			} else {
+				c = i18n(l.sampleContents[len(l.sampleContents)-1])
+			}
+			fmt.Fprintf(w, "%s\n\n", c)
+		}
+
+		for _, cf := range l.codeFences {
+			cf.generateTemplate(w)
+		}
+
+		if l.table != nil {
+			l.table.generateTemplate(w, lang)
+		}
+
+		for _, c := range l.children {
+			c.generateTemplate(w, lang)
+		}
+	}
+	return nil
+}
+
+func (l Layout[T]) templateLabel(i int, lang string) string {
+	var result string
+	i18n := func(src string) string {
+		return l.j.findTranslation(src, lang)
+	}
+	if l.labelPattern != "" {
+		if i < len(l.samples) {
+			result = i18n(l.labelPattern) + ": [" + i18n(l.samples[i]) + "]"
+		} else {
+			result = i18n(l.labelPattern) + ": [Lorem Ipsum]"
+		}
+	} else if len(l.samples) > 0 {
+		if i < len(l.samples) {
+			result = "[" + i18n(l.samples[i]) + "]"
+		} else {
+			result = fmt.Sprintf("[%s][%d]", i18n(l.samples[len(l.samples)-1]), i+1)
+		}
+	} else if l.labelFieldName != "" {
+		result = "[" + i18n(l.labelFieldName) + "]"
+	} else if l.instanceFieldName != "" {
+		result = "[" + i18n(l.instanceFieldName) + "]"
+	} else {
+		result = "[Title]"
+	}
+	var opts []string
+	for _, o := range l.options {
+		if o.sample != nil {
+			if o.sample == true {
+				opts = append(opts, i18n(o.fieldName))
+			} else {
+				opts = append(opts, fmt.Sprintf("%s=[%v]", i18n(o.fieldName), o.sample))
+			}
+		}
+	}
+	if len(opts) > 0 {
+		result += " (" + strings.Join(opts, ", ") + ")"
+	}
+
+	return result
 }

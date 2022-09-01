@@ -2,10 +2,12 @@ package mdd
 
 import (
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 
 	"github.com/future-architect/tagscanner/runtimescan"
+	"github.com/shibukawa/formatdata-go"
 )
 
 type Table[T any] struct {
@@ -53,21 +55,24 @@ func (t Table[T]) assignCellsAsStruct(target reflect.Value, cells []map[string]s
 	}
 	rowType := slice.Type().Elem() // todo: should support pointer type
 
-	var usedKeys []string
+	var fieldKeys []string
 	for _, f := range t.fields {
-		usedKeys = append(usedKeys, f.key)
+		fieldKeys = append(fieldKeys, f.key)
 	}
 
 	keyMap := make([]string, len(t.fields))
+	usedKeys := make(map[string]bool)
 	for k := range key2column {
-		index, _, ok := t.j.translateToPrimaryKey(k, usedKeys)
+		index, k2, ok := t.j.translateToPrimaryKey(k, fieldKeys)
 		if ok {
 			keyMap[index] = k
+			usedKeys[strings.ToLower(k2)] = true
 		} else {
 			lk := strings.ToLower(k)
 			for i, f := range t.fields {
 				if lk == f.key {
 					keyMap[i] = lk
+					usedKeys[lk] = true
 					break
 				}
 			}
@@ -77,14 +82,7 @@ func (t Table[T]) assignCellsAsStruct(target reflect.Value, cells []map[string]s
 	var missingField []string
 	for _, f := range t.fields {
 		if f.required {
-			found := false
-			for _, exist := range keyMap {
-				if f.key == exist {
-					found = true
-					break
-				}
-			}
-			if !found {
+			if _, ok := usedKeys[f.key]; !ok {
 				missingField = append(missingField, f.origKey)
 			}
 		}
@@ -172,4 +170,31 @@ func (t Table[T]) assignCellsAsMap(target reflect.Value, cells []map[string]stri
 		sliceTarget.Set(slice)
 	}
 	return nil
+}
+
+func (t Table[T]) generateTemplate(w io.Writer, lang string) {
+	maxRows := 2
+	headers := make([]any, len(t.fields))
+	for i, f := range t.fields {
+		headers[i] = t.j.findTranslation(f.fieldName, lang)
+		if len(f.samples) > maxRows {
+			maxRows = len(f.samples)
+		}
+	}
+	cells := make([][]any, maxRows+1)
+	cells[0] = headers
+	for i := 0; i < maxRows; i++ {
+		row := make([]any, len(t.fields))
+		for j, f := range t.fields {
+			if i < len(f.samples) {
+				row[j] = f.samples[i]
+			} else {
+				row[j] = "..."
+			}
+		}
+		cells[i+1] = row
+	}
+	formatdata.FormatDataTo(cells, w, formatdata.Opt{
+		OutputFormat: formatdata.Markdown,
+	})
 }

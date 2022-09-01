@@ -68,6 +68,7 @@ type DocJig[T any] struct {
 	aliases     map[string][]*alias
 }
 
+// NewDocJig is entry point function of this library
 func NewDocJig[T any]() *DocJig[T] {
 	j := &DocJig[T]{
 		DefaultLang: "en",
@@ -81,6 +82,14 @@ func NewDocJig[T any]() *DocJig[T] {
 	return j
 }
 
+// Alias specify label alias or translation
+//
+// Basically Translation and standard alias is not different when parsing:
+//
+//	jig.Alias("Table", "表")
+//	jig.Alias("Table").Lang("ja", "表")
+//
+// Language is used for [DocJig.GenerateTemplate].
 func (j *DocJig[T]) Alias(primaryLabel string, aliases ...string) *Alias[T] {
 	lowLabel := strings.ToLower(primaryLabel)
 	if _, ok := j.aliases[lowLabel]; !ok {
@@ -124,6 +133,19 @@ func (j *DocJig[T]) matchLabel(pattern, actualLabel string) (suffix string, ok b
 	return actualLabel, false
 }
 
+func (j *DocJig[T]) findTranslation(pattern, lang string) string {
+	if lang == "" {
+		lang = j.DefaultLang
+	}
+	pl := strings.ToLower(pattern)
+	for _, a := range j.aliases[pl] {
+		if a.lang == lang {
+			return a.label
+		}
+	}
+	return pattern
+}
+
 func (j *DocJig[T]) translateToPrimaryKey(variant string, searchTargets []string) (index int, key string, ok bool) {
 	for i, target := range searchTargets {
 		for _, a := range j.aliases[target] {
@@ -138,11 +160,15 @@ func (j *DocJig[T]) translateToPrimaryKey(variant string, searchTargets []string
 	return -1, "", false
 }
 
+// Alias is used to absorb orthographical variants or translation
+//
+// This object is created by [DocJig.Alias] method.
 type Alias[T any] struct {
 	parent       *DocJig[T]
 	primaryLabel string
 }
 
+// Lang specifies word in other language
 func (i *Alias[T]) Lang(lang string, aliases ...string) *Alias[T] {
 	for _, a := range aliases {
 		i.parent.aliases[i.primaryLabel] = append(i.parent.aliases[i.primaryLabel], &alias{
@@ -164,9 +190,18 @@ func (j *DocJig[T]) Root(pattern ...string) *Layout[T] {
 	return j.root
 }
 
-func (j *DocJig[T]) GenerateTemplate(w io.Writer) error {
-	// todo
-	return nil
+// GenerateOption is option to modify [DocJig.GenerateTemplate]'s result.
+type GenerateOption struct {
+	Language string
+}
+
+// GenerateTemplate generates markdown template
+func (j *DocJig[T]) GenerateTemplate(w io.Writer, opt ...GenerateOption) error {
+	var o GenerateOption
+	if len(opt) > 0 {
+		o = opt[0]
+	}
+	return j.root.generateTemplate(w, o.Language)
 }
 
 // Parse method is an entry point of your DocJig instance for

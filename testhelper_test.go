@@ -8,7 +8,7 @@ import (
 
 var stripSpacePattern = regexp.MustCompile("(^[ \t]*)")
 
-func TrimIndent(t *testing.T, src string) string {
+func TrimIndent(t *testing.T, src string, replace ...string) string {
 	t.Helper()
 	lines := strings.Split(src, "\n")
 	if lines[0] == "" {
@@ -22,5 +22,9 @@ func TrimIndent(t *testing.T, src string) string {
 			b.WriteByte('\n')
 		}
 	}
-	return b.String()
+	result := strings.TrimRight(b.String(), "\n")
+	if len(replace) > 1 {
+		result = strings.ReplaceAll(result, replace[0], replace[1])
+	}
+	return result
 }
