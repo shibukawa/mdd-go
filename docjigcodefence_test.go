@@ -247,7 +247,7 @@ func TestCodeFence_Generate(t *testing.T) {
 				},
 			},
 			want: TrimIndent(t, `
-				# [Name]
+				# [Title]
 
 				~~~sql:test
 				select * from users;

@@ -189,4 +189,5 @@ func (t Table[T]) generateTemplate(w io.Writer, lang string) {
 	formatdata.FormatDataTo(cells, w, formatdata.Opt{
 		OutputFormat: formatdata.Markdown,
 	})
+	io.WriteString(w, "\n")
 }

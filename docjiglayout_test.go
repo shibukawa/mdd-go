@@ -478,14 +478,31 @@ func TestLayout_Generate(t *testing.T) {
 					jig := NewDocJig[Doc]()
 					root := jig.Root()
 					root.Label("Name")
-					root.Child("Level2")
+					root.Child("Level2").Label("Name")
 					return jig
 				},
 			},
 			want: TrimIndent(t, `
-				# [Name]
+				# [Title]
 				
 				## [Level2]
+				`),
+		},
+		{
+			name: "no label header with pattern",
+			args: args{
+				create: func(t *testing.T) *DocJig[Doc] {
+					jig := NewDocJig[Doc]()
+					root := jig.Root()
+					root.Label("Name")
+					root.Child("Level2", "Level 2")
+					return jig
+				},
+			},
+			want: TrimIndent(t, `
+				# [Title]
+				
+				## Level 2
 				`),
 		},
 		{
@@ -495,14 +512,14 @@ func TestLayout_Generate(t *testing.T) {
 					jig := NewDocJig[Doc]()
 					root := jig.Root()
 					root.Label("Name").Sample("Doc Title")
-					root.Child("Level2", "Level2").Sample("Child Title")
+					root.Child("Level2", "Level2").Sample("Child Title") // ignored if Label() is not called
 					return jig
 				},
 			},
 			want: TrimIndent(t, `
 				# [Doc Title]
 				
-				## Level2: [Child Title]
+				## Level2
 				`),
 		},
 		{
@@ -513,7 +530,7 @@ func TestLayout_Generate(t *testing.T) {
 					root := jig.Root()
 					root.Label("Name").Sample("Doc Title")
 					root.SampleContent("This is sample content.")
-					level2 := root.Child("Level2", "Level2").Sample("Child Title")
+					level2 := root.Child("Level2", "Level2").Label("Name").Sample("Child Title")
 					level2.SampleContent("This is sample content in child layout.")
 					return jig
 				},
@@ -555,7 +572,7 @@ func TestLayout_Generate(t *testing.T) {
 
 					root := jig.Root()
 					root.Label("Name").Sample("Doc Title")
-					root.Child("Level2", "Level2").Sample("Child Title")
+					root.Child("Level2", "Level2").Label("Name").Sample("Child Title")
 					return jig
 				},
 				opt: GenerateOption{

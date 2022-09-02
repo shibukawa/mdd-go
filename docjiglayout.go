@@ -254,21 +254,27 @@ func (l Layout[T]) templateLabel(i int, lang string) string {
 		return l.j.findTranslation(src, lang)
 	}
 	if l.labelPattern != "" {
-		if i < len(l.samples) {
-			result = i18n(l.labelPattern) + ": [" + i18n(l.samples[i]) + "]"
+		if l.labelFieldName != "" {
+			if i < len(l.samples) {
+				result = i18n(l.labelPattern) + ": [" + i18n(l.samples[i]) + "]"
+			} else {
+				result = i18n(l.labelPattern) + ": [Lorem Ipsum]"
+			}
 		} else {
-			result = i18n(l.labelPattern) + ": [Lorem Ipsum]"
+			result = i18n(l.labelPattern)
 		}
 	} else if len(l.samples) > 0 {
 		if i < len(l.samples) {
 			result = "[" + i18n(l.samples[i]) + "]"
 		} else {
-			result = fmt.Sprintf("[%s][%d]", i18n(l.samples[len(l.samples)-1]), i+1)
+			result = "[...]"
 		}
-	} else if l.labelFieldName != "" {
-		result = "[" + i18n(l.labelFieldName) + "]"
 	} else if l.instanceFieldName != "" {
-		result = "[" + i18n(l.instanceFieldName) + "]"
+		if l.labelFieldName != "" {
+			result = "[" + i18n(l.instanceFieldName) + "]"
+		} else {
+			result = i18n(l.instanceFieldName)
+		}
 	} else {
 		result = "[Title]"
 	}
