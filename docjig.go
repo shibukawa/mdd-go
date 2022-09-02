@@ -288,35 +288,39 @@ func (j *DocJig[T]) ParseString(src string) (*T, error) {
 			}
 		case blackfriday.CodeBlock:
 			layout := stack[currentLevel]
-			target := targets[currentLevel]
-			label := labels[currentLevel]
+			if layout != nil {
+				target := targets[currentLevel]
+				label := labels[currentLevel]
 
-			lang, info := parseCodeBlockType(node.CodeBlockData.Info)
+				lang, info := parseCodeBlockType(node.CodeBlockData.Info)
 
-			cf, ok := layout.findMatchedCodeFence(lang)
-			if ok {
-				err := assignValue(target, cf.fieldName, strings.Trim(string(node.Literal), "\n"), "code fence", label)
-				if err != nil {
-					return nil, err
-				}
-				err = assignValue(target, cf.languageFieldName, lang, "code fence's lang", label)
-				if err != nil {
-					return nil, err
-				}
-				err = assignValue(target, cf.infoFieldName, info, "code fence's info", label)
-				if err != nil {
-					return nil, err
+				cf, ok := layout.findMatchedCodeFence(lang)
+				if ok {
+					err := assignValue(target, cf.fieldName, strings.Trim(string(node.Literal), "\n"), "code fence", label)
+					if err != nil {
+						return nil, err
+					}
+					err = assignValue(target, cf.languageFieldName, lang, "code fence's lang", label)
+					if err != nil {
+						return nil, err
+					}
+					err = assignValue(target, cf.infoFieldName, info, "code fence's info", label)
+					if err != nil {
+						return nil, err
+					}
 				}
 			}
 		case blackfriday.Table:
 			layout := stack[currentLevel]
-			target := targets[currentLevel]
-			label := labels[currentLevel]
-			cells, key2column := parseTable(node)
-			if layout.table != nil {
-				err := layout.table.assignCells(target, cells, key2column, label, &result)
-				if err != nil {
-					return nil, err
+			if layout != nil {
+				target := targets[currentLevel]
+				label := labels[currentLevel]
+				cells, key2column := parseTable(node)
+				if layout.table != nil {
+					err := layout.table.assignCells(target, cells, key2column, label, &result)
+					if err != nil {
+						return nil, err
+					}
 				}
 			}
 		}

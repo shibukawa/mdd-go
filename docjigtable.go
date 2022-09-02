@@ -105,15 +105,7 @@ func (t Table[T]) assignCellsAsStruct(target reflect.Value, cells []map[string]s
 				if err != nil {
 					return fmt.Errorf("can't convert value '%s' at field '%s' (inside '%s' section): %w", rv[keyMap[fi]], f.origKey, label, err)
 				}
-				vv := reflect.ValueOf(newV)
-				if vv.Type() == ct.Type() && vv.Kind() == reflect.Struct && vv.Type() == ct.Type() {
-					ct.Set(vv)
-				} else if vv.Type() == ct.Type() && vv.Kind() == reflect.Pointer && vv.Type().Elem().Kind() == reflect.Struct {
-					ct.Set(vv)
-				} else {
-					ctp := ct.Addr().Interface()
-					runtimescan.FuzzyAssign(&ctp, &newV)
-				}
+				runtimescan.FuzzyAssign(ct, newV)
 			} else {
 				runtimescan.FuzzyAssign(ct.Addr().Interface(), cv)
 			}

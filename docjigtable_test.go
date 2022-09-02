@@ -14,9 +14,15 @@ func TestTable(t *testing.T) {
 		Name  string
 		Value string
 	}
+	type DefinedType int
+	const (
+		TRUE  DefinedType = 0
+		FALSE DefinedType = 1
+	)
 	type Row struct {
 		StringCell  string
 		IntCell     int
+		DefinedType DefinedType
 		BoolCell    bool
 		CustomCell  CustomCell
 		CustomCellP *CustomCell
@@ -133,6 +139,45 @@ func TestTable(t *testing.T) {
 				`),
 			},
 			wantErr: "required column(BoolCell) are missing (inside 'Root Heading' section)",
+		},
+		{
+			name: "custom cell (defined type)",
+			args: args{
+				create: func(t *testing.T) *DocJig[Doc] {
+					jig := NewDocJig[Doc]()
+					root := jig.Root()
+					table := root.Table("TableContent")
+					table.Field("StringCell")
+					table.Field("DefinedType").As(func(v string, d *Doc) (any, error) {
+						maps := map[string]DefinedType{
+							"true":  TRUE,
+							"false": FALSE,
+						}
+						return maps[v], nil
+					})
+					return jig
+				},
+				src: TrimIndent(t, `
+				# Root Heading
+
+				| StringCell | DefinedType |
+				|------------|-------------|
+				| hello      | true        |
+				| world!!    | false       |
+				`),
+			},
+			want: &Doc{
+				TableContent: []Row{
+					{
+						StringCell:  "hello",
+						DefinedType: TRUE,
+					},
+					{
+						StringCell:  "world!!",
+						DefinedType: FALSE,
+					},
+				},
+			},
 		},
 		{
 			name: "custom cell (value)",
