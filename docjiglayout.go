@@ -258,7 +258,7 @@ func (l Layout[T]) templateLabel(i int, lang string) string {
 			if i < len(l.samples) {
 				result = i18n(l.labelPattern) + ": [" + i18n(l.samples[i]) + "]"
 			} else {
-				result = i18n(l.labelPattern) + ": [Lorem Ipsum]"
+				result = i18n(l.labelPattern) + ": [" + i18n("Lorem Ipsum") + "]"
 			}
 		} else {
 			result = i18n(l.labelPattern)
@@ -276,7 +276,7 @@ func (l Layout[T]) templateLabel(i int, lang string) string {
 			result = i18n(l.instanceFieldName)
 		}
 	} else {
-		result = "[Title]"
+		result = "[" + i18n("Title") + "]"
 	}
 	var opts []string
 	for _, o := range l.options {
