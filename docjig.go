@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -438,6 +440,119 @@ func (t *DocJig[T]) MustParseString(src string) *T {
 //	}
 func (t *DocJig[T]) MustParseFile(filepath string) *T {
 	result, err := t.ParseFile(filepath)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+// ParseGlob method is an entry point of your DocJig instance for
+// your package user.
+//
+// You should wrap and create public function in you package like this:
+//
+//	func ParseGlob(patterns ...string)) (map[string]*YourDocument, error) {
+//	    return jig.ParseGlob(patterns...)
+//	}
+func (t *DocJig[T]) ParseGlob(patterns ...string) (map[string]*T, error) {
+	var filenames []string
+	for _, pattern := range patterns {
+		list, err := filepath.Glob(pattern)
+		if err != nil {
+			return nil, err
+		}
+		if len(list) == 0 {
+			return nil, fmt.Errorf("pattern matches no files: %#q", pattern)
+		}
+		filenames = append(filenames, list...)
+	}
+	result := make(map[string]*T)
+	for _, filename := range filenames {
+		st, err := os.Stat(filename)
+		if err != nil {
+			return nil, err
+		}
+		if st.IsDir() {
+			continue
+		}
+		parsed, err := t.ParseFile(filename)
+		if err != nil {
+			return nil, err
+		}
+		result[filename] = parsed
+
+	}
+	return result, nil
+}
+
+// ParseFS method is an entry point of your DocJig instance for
+// your package user.
+//
+// You should wrap and create public function in you package like this:
+//
+//	func ParseFS(fsys fs.FS, patterns ...string)) (map[string]*YourDocument, error) {
+//	    return jig.ParseFS(fsys, patterns...)
+//	}
+func (t *DocJig[T]) ParseFS(fsys fs.FS, patterns ...string) (map[string]*T, error) {
+	var filenames []string
+	for _, pattern := range patterns {
+		list, err := fs.Glob(fsys, pattern)
+		if err != nil {
+			return nil, err
+		}
+		if len(list) == 0 {
+			return nil, fmt.Errorf("pattern matches no files: %#q", pattern)
+		}
+		filenames = append(filenames, list...)
+	}
+	result := make(map[string]*T)
+	for _, filename := range filenames {
+		st, err := fs.Stat(fsys, filename)
+		if err != nil {
+			return nil, err
+		}
+		if st.IsDir() {
+			continue
+		}
+		c, err := fs.ReadFile(fsys, filename)
+		if err != nil {
+			return nil, err
+		}
+		parsed, err := t.ParseString(string(c))
+		if err != nil {
+			return nil, err
+		}
+		result[filename] = parsed
+	}
+	return result, nil
+}
+
+// MustParseGlob method is an entry point of your DocJig instance for
+// your package user.
+//
+// You should wrap and create public function in you package like this:
+//
+//	func MustParseGlob(patterns ...string)) map[string]*YourDocument {
+//	    return jig.MustParseGlob(patterns...)
+//	}
+func (t *DocJig[T]) MustParseGlob(patterns ...string) map[string]*T {
+	result, err := t.ParseGlob(patterns...)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+// MustParseFS method is an entry point of your DocJig instance for
+// your package user.
+//
+// You should wrap and create public function in you package like this:
+//
+//	func MustParseFS(fsys fs.FS, patterns ...string)) map[string]*YourDocument {
+//	    return jig.MustParseFS(patterns...)
+//	}
+func (t *DocJig[T]) MustParseFS(fsys fs.FS, patterns ...string) map[string]*T {
+	result, err := t.ParseFS(fsys, patterns...)
 	if err != nil {
 		panic(err)
 	}
