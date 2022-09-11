@@ -2,6 +2,7 @@ package mdd
 
 import (
 	"embed"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -232,5 +233,35 @@ func TestFS(t *testing.T) {
 			assert.Equal(t, tc.want, got)
 		})
 	}
+}
 
+type PostProcessTestDoc struct {
+	PostProcessCalled bool
+}
+
+func (d *PostProcessTestDoc) PostProcess() {
+	d.PostProcessCalled = true
+}
+
+func TestPostProcessOK(t *testing.T) {
+	jig := NewDocJig[PostProcessTestDoc]()
+	got, err := jig.ParseString(`# Test`)
+	assert.NoError(t, err)
+	assert.True(t, got.PostProcessCalled)
+}
+
+var PostProcessError = errors.New("dummy error")
+
+type PostProcessTestDocNG struct {
+}
+
+func (d *PostProcessTestDocNG) PostProcess() error {
+	return PostProcessError
+}
+
+func TestPostProcessNG(t *testing.T) {
+	jig := NewDocJig[PostProcessTestDocNG]()
+	got, err := jig.ParseString(`# Test`)
+	assert.Error(t, err, PostProcessError.Error())
+	assert.Nil(t, got)
 }

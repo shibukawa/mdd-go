@@ -19,6 +19,14 @@ type alias struct {
 	label string
 }
 
+// PostProcessHook is interface for document.
+//
+// It is optional, but if target implements this interface,
+// The method is called after parsing.
+type PostProcessHook interface {
+	PostProcess()
+}
+
 // DocJig is a entry struct of this package.
 //
 // To create markdown parser, you should instantiate
@@ -264,13 +272,15 @@ func (j *DocJig[T]) ParseString(src string) (*T, error) {
 				suffix, labelMatched = j.matchLabel(layout.labelPattern, label)
 			} else {
 				parent := stack[currentLevel-1]
-				var err error
-				layout, target, suffix, ok, err = parent.findMatchedChild(label, targets[currentLevel-1])
-				if ok {
-					labelMatched = true
-				}
-				if err != nil {
-					return nil, err
+				if parent != nil {
+					var err error
+					layout, target, suffix, ok, err = parent.findMatchedChild(label, targets[currentLevel-1])
+					if ok {
+						labelMatched = true
+					}
+					if err != nil {
+						return nil, err
+					}
 				}
 			}
 			if ok { // level1 or layer matched
@@ -327,6 +337,17 @@ func (j *DocJig[T]) ParseString(src string) (*T, error) {
 			}
 		}
 		node = node.Next
+	}
+
+	m := reflect.ValueOf(&result).MethodByName("PostProcess")
+	if m.IsValid() {
+		errs := m.Call(nil)
+		if len(errs) > 0 {
+			err, ok := errs[0].Interface().(error)
+			if ok {
+				return nil, err
+			}
+		}
 	}
 
 	return &result, nil
