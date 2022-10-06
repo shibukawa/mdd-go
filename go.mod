@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/future-architect/tagscanner v1.0.1
 	github.com/russross/blackfriday/v2 v2.1.0
-	github.com/shibukawa/formatdata-go v0.1.2
+	github.com/shibukawa/formatdata-go v0.1.3
 	github.com/stretchr/testify v1.8.0
 )
 
@@ -18,7 +18,7 @@ require (
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/shibukawa/stringwidth v0.2.0 // indirect
-	golang.org/x/crypto v0.0.0-20220817201139-bc19a97f63c8 // indirect
+	golang.org/x/crypto v0.0.0-20221005025214-4161e89ecf1b // indirect
 	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 // indirect
 	golang.org/x/text v0.3.7 // indirect
